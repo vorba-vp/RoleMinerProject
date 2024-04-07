@@ -19,7 +19,8 @@ class UpaMatrixBuilder:
                 )
                 user_set.add(user_num)
                 permission_set.add(permission_num)
-
+        if not user_set or not permission_set:
+            return np.zeros((0, 0))
         num_of_users = max(user_set)
         num_of_permissions = max(permission_set)
 
