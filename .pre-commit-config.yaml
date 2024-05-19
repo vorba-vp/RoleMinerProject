@@ -15,6 +15,6 @@ repos:
     hooks:
     -   id: isort
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.9.0  # Use the latest version
+    rev: v1.10.0  # Use the latest version
     hooks:
     -   id: mypy
