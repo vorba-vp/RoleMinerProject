@@ -40,7 +40,8 @@ def load_upa_from_one2one_file(filename: str) -> np.ndarray:
     return upa_matrix
 
 
-def generate_matrix(
+def generate_upa_matrix(
+    *,
     num_of_roles: int,
     num_of_users: int,
     num_of_permissions: int,
@@ -53,8 +54,14 @@ def generate_matrix(
         max_permissions_per_role=max_permissions_per_role,
     )
 
-    for idx, role in enumerate(roles):
-        print(f"Role {idx + 1}: {role}")
+    users = np.zeros((num_of_users, num_of_permissions), dtype=int)
+    for u in range(num_of_users):
+        nrl = random.randint(1, max_roles_per_user)
+        random_roles = random.sample(range(num_of_roles), nrl)
+        for r in random_roles:
+            users[u] = np.logical_or(users[u], roles[r])
+
+    return users
 
 
 def generate_pa_matrix(
@@ -76,7 +83,14 @@ if __name__ == "__main__":
 
     # matrix = UpaMatrixBuilder.load_from_one2one_file("real_datasets/healthcare.txt")
     # print(matrix)
-    generate_matrix(5, 12, 7, 1, 4)
+    matrix = generate_upa_matrix(
+        num_of_roles=5,
+        num_of_users=12,
+        num_of_permissions=7,
+        max_roles_per_user=1,
+        max_permissions_per_role=3,
+    )
+    print(matrix)
 
     elapsed_time = time.time() - start_time
     print(f"--- {elapsed_time} seconds ---")
