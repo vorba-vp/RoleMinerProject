@@ -73,8 +73,8 @@ def get_candidate_roles_total_count(
 
 if __name__ == "__main__":
     num_of_roles = 4
-    # upa = load_upa_from_one2one_file("dataset/test_datasets/simple_dataset.txt")
-    upa = load_upa_from_one2one_file("dataset/test_datasets/identity_matrix.txt")
+    upa = load_upa_from_one2one_file("dataset/test_datasets/simple_dataset.txt")
+    # upa = load_upa_from_one2one_file("dataset/test_datasets/identity_matrix.txt")
     # upa = load_upa_from_one2one_file("dataset/real_datasets/americas_large.txt")
     print("UPA")
     print(upa)

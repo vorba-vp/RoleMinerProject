@@ -1,5 +1,6 @@
 import numpy as np
 
+from algorithms.fast_miner import get_fast_miner_result
 from algorithms.miner_utils import (
     get_candidate_roles_total_count,
     get_fm_gen_roles,
@@ -56,3 +57,16 @@ def test__fast_miner__simple__dataset():
     for role_label, count in total_count.items():
         assert role_label in test_data["TOTAL_COUNT"]
         assert count == test_data["TOTAL_COUNT"][role_label]
+
+
+def test__get_fm_result():
+    upa = load_upa_from_one2one_file("dataset/test_datasets/simple_dataset.txt")
+    result, runtime = get_fast_miner_result(upa)
+    assert result == {
+        (1, 1, 0, 1): {"label": "P1,P2,P4", "original_count": 5, "total_count": 5},
+        (0, 1, 0, 0): {"label": "P2", "original_count": 0, "total_count": 11},
+        (0, 1, 0, 1): {"label": "P2,P4", "original_count": 0, "total_count": 8},
+        (0, 0, 0, 1): {"label": "P4", "original_count": 2, "total_count": 10},
+        (0, 1, 1, 0): {"label": "P2,P3", "original_count": 3, "total_count": 6},
+        (0, 1, 1, 1): {"label": "P2,P3,P4", "original_count": 3, "total_count": 3},
+    }

@@ -3,6 +3,7 @@ from dash import dash, html
 from interface.callbacks import register_control_callbacks
 from interface.layouts.control_panel import control_panel_layout
 from interface.layouts.left_part import left_part_layout
+from interface.layouts.right_part import right_part_layout
 
 
 def main():
@@ -17,15 +18,9 @@ def main():
                     # Left part of the bottom section
                     left_part_layout,
                     # Right part of the bottom section
-                    html.Div(
-                        children=[
-                            html.H2("Right Part"),
-                            # Add content for the right part here
-                        ],
-                        style={"width": "50%"},
-                    ),
+                    right_part_layout,
                 ],
-                style={"display": "flex", "height": "80vh"},
+                style={"display": "flex", "flex-direction": "column"},
             ),
         ]
     )
