@@ -1,3 +1,5 @@
+import os
+
 from dash import dash, html
 
 from interface.callbacks import register_control_callbacks
@@ -6,7 +8,7 @@ from interface.layouts.left_part import left_part_layout
 from interface.layouts.right_part import right_part_layout
 
 
-def main():
+def main() -> dash.Dash:
     app = dash.Dash(__name__)
     app.layout = html.Div(
         [
@@ -28,8 +30,10 @@ def main():
     # Import callbacks after app and layout have been defined
     register_control_callbacks(app)
 
-    app.run_server(debug=True)
+    return app
 
 
 if __name__ == "__main__":
-    main()
+    app = main()
+    port = int(os.environ.get("PORT", 8050))
+    app.run_server(host="0.0.0.0", port=port)
