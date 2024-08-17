@@ -9,7 +9,7 @@ def basic_rmp(upa: np.ndarray, delta_factor: int = 0):
     gen_roles_list = np.array([r for r in gen_roles.keys()])
     updated_upa = upa.copy()
     final_roles_list = []
-    while  np.sum(updated_upa == 1) > delta_factor:
+    while np.sum(updated_upa == 1) > delta_factor:
         role, updated_upa, gen_roles_list = get_max_cover_role(
             updated_upa, gen_roles_list
         )
@@ -18,8 +18,9 @@ def basic_rmp(upa: np.ndarray, delta_factor: int = 0):
 
 
 if __name__ == "__main__":
-    from dataset.upa_matrix import load_upa_from_one2one_file
     import time
+
+    from dataset.upa_matrix import load_upa_from_one2one_file
 
     start_time = time.time()
     upa = load_upa_from_one2one_file("dataset/test_datasets/simple_dataset.txt")
