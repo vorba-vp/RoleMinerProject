@@ -2,7 +2,7 @@ import numpy as np
 
 from algorithms.fast_miner import get_fast_miner_result
 from algorithms.miner_utils import (
-    get_candidate_roles_total_count,
+    get_fm_candidate_roles_total_count,
     get_fm_gen_roles,
     get_init_roles,
 )
@@ -53,7 +53,7 @@ def test__fast_miner__simple__dataset():
     assert gen_roles is not None
     assert np.array_equal(gen_roles, test_data["GEN_ROLES"])
 
-    total_count = get_candidate_roles_total_count(upa, gen_roles)
+    total_count = get_fm_candidate_roles_total_count(upa, gen_roles)
     for role_label, count in total_count.items():
         assert role_label in test_data["TOTAL_COUNT"]
         assert count == test_data["TOTAL_COUNT"][role_label]

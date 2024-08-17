@@ -1,9 +1,11 @@
 import copy
 from collections import defaultdict
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
+from numpy import ndarray
 
+from algorithms.utils_func import sort_dict_by_value
 from dataset.upa_matrix import generate_upa_matrix, load_upa_from_one2one_file
 
 
@@ -11,6 +13,15 @@ class FastMinerException(Exception):
     pass
 
 
+def get_role_label(role: np.ndarray) -> str:
+    permissions = []
+    for i, p in enumerate(role):
+        if p:
+            permissions.append(f"P{i+1}")
+    return ",".join(permissions)
+
+
+# region: Fast Miner Utils functions
 def get_init_roles(upa: np.ndarray) -> Tuple[np.ndarray | None, Dict]:
     num_of_users, num_of_permissions = upa.shape
     if not num_of_users or not num_of_permissions:
@@ -53,22 +64,94 @@ def get_fm_gen_roles(init_roles: np.ndarray) -> np.ndarray | None:
     return gen_roles
 
 
-def get_candidate_roles_total_count(
+def get_fm_candidate_roles_total_count(
     upa: np.ndarray, gen_roles: np.ndarray
 ) -> Dict[Tuple, int]:
     total_count: Dict[Tuple, int] = defaultdict(int)
 
     for r in gen_roles:
         for u in upa:
-            # print(f"TEST: {}")
             if np.array_equal(np.bitwise_and(r, u), r):
                 total_count[tuple(r)] += 1
 
-    return dict(total_count)
+    return sort_dict_by_value(total_count)
 
+
+# endregion
 
 # TODO: tests
-# TODO: total count
+
+
+def get_role_cover_area(upa: np.ndarray, role: np.ndarray) -> int:
+    count = 0
+    for row in upa:
+        if all([r_i >= p for r_i, p in zip(row, role)]):
+            for r_i, p in zip(row, role):
+                if r_i == 1 and p == 1:
+                    count += 1
+    return count
+
+
+def roles_subtraction(a: Tuple[int], b: Tuple[int]) -> tuple[int, ...]:
+    result: List[int] = []
+    for i in range(len(a)):
+        if a[i] == 1 and b[i] == 1:
+            result.append(0)
+        else:
+            result.append(a[i])
+    return tuple(result)
+
+
+def get_max_cover_role(upa: np.ndarray, list_of_roles: np.ndarray):
+    roles_by_cover_area = {}
+    for role in list_of_roles:
+        roles_by_cover_area[tuple(role)] = get_role_cover_area(upa, role)
+    roles_by_cover_area = sort_dict_by_value(roles_by_cover_area)
+    max_cover_role, covered_area = next(iter(roles_by_cover_area.items()))
+    max_cover_role_array = np.array(max_cover_role)
+    _updated_upa = upa.copy()
+
+    for i in range(_updated_upa.shape[0]):
+        if np.all((_updated_upa[i] >= 1) | (max_cover_role_array != 1)):
+            _updated_upa[i] = np.where(max_cover_role_array == 1, 2, _updated_upa[i])
+    updated_list_of_roles = np.array(
+        [
+            role
+            for role in list_of_roles
+            if not np.array_equal(role, max_cover_role_array)
+        ]
+    )
+    return max_cover_role, _updated_upa, updated_list_of_roles
+
+
+def apply_max_cover_role(
+    upa: np.ndarray, role_count_with_label: Dict[Tuple, Dict]
+) -> tuple[tuple, ndarray, dict[tuple, tuple[int, ...]]]:
+    # Calculate role covered area
+    role_count = {
+        role["role"]: role["count"] for role in role_count_with_label.values()
+    }
+    roles_by_covered_area = sort_dict_by_value(
+        {role: get_role_cover_area(role, count) for role, count in role_count.items()}
+    )
+    max_cover_role, covered_area = next(iter(roles_by_covered_area.items()))
+    max_cover_role_array = np.array(max_cover_role)
+    _updated_upa = upa.copy()
+
+    for i in range(_updated_upa.shape[0]):
+        _updated_upa[i] = np.where(
+            (_updated_upa[i] == 1) & (max_cover_role_array == 1), 2, _updated_upa[i]
+        )
+
+    updated_role_list = {
+        role: roles_subtraction(role, max_cover_role)
+        for role in role_count.keys()
+        if role != max_cover_role
+    }
+    _chosen_role = next(
+        k for k, v in role_count_with_label.items() if v["role"] == max_cover_role
+    )
+    return _chosen_role, _updated_upa, updated_role_list
 
 
 if __name__ == "__main__":
@@ -88,6 +171,12 @@ if __name__ == "__main__":
     gen_roles: np.ndarray = get_fm_gen_roles(init_roles)
     print("GEN_ROLES")
     print(gen_roles)
-    total_count = get_candidate_roles_total_count(upa, gen_roles)
+    total_count = get_fm_candidate_roles_total_count(upa, gen_roles)
     print("Total count")
     print(total_count)
+
+    print("RMP iteration")
+    chosen_role, updated_upa, updated_roles = get_max_cover_role(upa, gen_roles)
+    print(chosen_role)
+    print(updated_upa)
+    print(updated_roles)
