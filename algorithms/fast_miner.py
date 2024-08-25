@@ -7,7 +7,7 @@ from algorithms.miner_utils import (
     get_fm_candidate_roles_total_count,
     get_fm_gen_roles,
     get_init_roles,
-    get_role_label,
+    get_role_label_with_cache,
 )
 
 
@@ -21,7 +21,7 @@ def get_fast_miner_result(upa: np.ndarray) -> Tuple[Dict, float]:
 
         for candidate in gen_roles:
             result[tuple(candidate)] = {
-                "label": get_role_label(candidate),
+                "label": get_role_label_with_cache(candidate),
                 "original_count": original_count.get(tuple(candidate), 0),
                 "total_count": total_count[tuple(candidate)],
             }

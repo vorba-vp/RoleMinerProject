@@ -1,24 +1,34 @@
 import copy
 from collections import defaultdict
+from functools import lru_cache
 from typing import Dict, List, Tuple
 
 import numpy as np
+from joblib import Parallel, delayed
 from numpy import ndarray
 
 from algorithms.utils_func import sort_dict_by_value
 from dataset.upa_matrix import generate_upa_matrix, load_upa_from_one2one_file
+
+NUM_OF_PARALLEL_JOBS = 4
 
 
 class FastMinerException(Exception):
     pass
 
 
-def get_role_label(role: np.ndarray) -> str:
-    permissions = []
-    for i, p in enumerate(role):
-        if p:
-            permissions.append(f"P{i+1}")
-    return ",".join(permissions)
+def array_to_tuple(arr: np.ndarray) -> tuple:
+    return tuple(arr)
+
+
+@lru_cache(maxsize=None)  # Cache with unlimited size
+def get_role_label(role: tuple) -> str:
+    return ",".join(f"P{i+1}" for i, p in enumerate(role) if p)
+
+
+def get_role_label_with_cache(role: np.ndarray) -> str:
+    role_tuple = array_to_tuple(role)
+    return get_role_label(role_tuple)
 
 
 # region: Fast Miner Utils functions
@@ -82,14 +92,14 @@ def get_fm_candidate_roles_total_count(
 # TODO: tests
 
 
-def get_role_cover_area(upa: np.ndarray, role: np.ndarray) -> int:
+def get_role_cover_area(upa: np.ndarray, role: np.ndarray) -> tuple:
     count = 0
     for row in upa:
         if all([r_i >= p for r_i, p in zip(row, role)]):
             for r_i, p in zip(row, role):
                 if r_i == 1 and p == 1:
                     count += 1
-    return count
+    return tuple(role), count
 
 
 def roles_subtraction(a: Tuple[int], b: Tuple[int]) -> tuple[int, ...]:
@@ -102,12 +112,24 @@ def roles_subtraction(a: Tuple[int], b: Tuple[int]) -> tuple[int, ...]:
     return tuple(result)
 
 
+def process_row(i, row, max_cover_role_array, max_cover_role) -> tuple:
+    ua_dict_local = defaultdict(list)
+
+    if np.all((np.any(row == 1)) & ((row >= 1) | (max_cover_role_array != 1))):
+        ua_dict_local[i + 1].append(max_cover_role)
+        updated_row = np.where(max_cover_role_array == 1, 2, row)
+    else:
+        updated_row = row
+
+    return i, ua_dict_local, updated_row
+
+
 def get_max_cover_role(upa: np.ndarray, list_of_roles: np.ndarray):
     # Get sorted list of roles by cover of area of UPA
-    roles_by_cover_area = {
-        tuple(role): get_role_cover_area(upa, role) for role in list_of_roles
-    }
-    roles_by_cover_area = sort_dict_by_value(roles_by_cover_area)
+    result = Parallel(n_jobs=NUM_OF_PARALLEL_JOBS)(
+        delayed(get_role_cover_area)(upa, role) for role in list_of_roles
+    )
+    roles_by_cover_area = sort_dict_by_value(dict(result))
 
     # Get max cover role
     max_cover_role, covered_area = next(iter(roles_by_cover_area.items()))
@@ -116,23 +138,19 @@ def get_max_cover_role(upa: np.ndarray, list_of_roles: np.ndarray):
     # Update UPA
     # Mark users that max_cover_role applied to them. Users permissions match the role marked by "2"
     _updated_upa = upa.copy()
-    ua_dict = defaultdict(list)
-    for i in range(_updated_upa.shape[0]):
-        if np.all(
-            (np.any(_updated_upa[i] == 1))
-            & ((_updated_upa[i] >= 1) | (max_cover_role_array != 1))
-        ):
-            ua_dict[i + 1].append(max_cover_role)
-            _updated_upa[i] = np.where(max_cover_role_array == 1, 2, _updated_upa[i])
+    results = Parallel(n_jobs=NUM_OF_PARALLEL_JOBS)(
+        delayed(process_row)(i, _updated_upa[i], max_cover_role_array, max_cover_role)
+        for i in range(_updated_upa.shape[0])
+    )
+
+    ua_dict: dict[tuple, list] = defaultdict(list)
+    for i, local_dict, updated_row in results:
+        ua_dict.update(local_dict)
+        _updated_upa[i] = updated_row
 
     # Remove max_cover_role from potential roles list
-    updated_list_of_roles = np.array(
-        [
-            role
-            for role in list_of_roles
-            if not np.array_equal(role, max_cover_role_array)
-        ]
-    )
+    mask = ~np.all(list_of_roles == max_cover_role_array, axis=1)
+    updated_list_of_roles = list_of_roles[mask]
     return max_cover_role, _updated_upa, updated_list_of_roles, ua_dict
 
 
