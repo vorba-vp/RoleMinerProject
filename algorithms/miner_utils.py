@@ -103,17 +103,29 @@ def roles_subtraction(a: Tuple[int], b: Tuple[int]) -> tuple[int, ...]:
 
 
 def get_max_cover_role(upa: np.ndarray, list_of_roles: np.ndarray):
-    roles_by_cover_area = {}
-    for role in list_of_roles:
-        roles_by_cover_area[tuple(role)] = get_role_cover_area(upa, role)
+    # Get sorted list of roles by cover of area of UPA
+    roles_by_cover_area = {
+        tuple(role): get_role_cover_area(upa, role) for role in list_of_roles
+    }
     roles_by_cover_area = sort_dict_by_value(roles_by_cover_area)
+
+    # Get max cover role
     max_cover_role, covered_area = next(iter(roles_by_cover_area.items()))
     max_cover_role_array = np.array(max_cover_role)
-    _updated_upa = upa.copy()
 
+    # Update UPA
+    # Mark users that max_cover_role applied to them. Users permissions match the role marked by "2"
+    _updated_upa = upa.copy()
+    ua_dict = defaultdict(list)
     for i in range(_updated_upa.shape[0]):
-        if np.all((_updated_upa[i] >= 1) | (max_cover_role_array != 1)):
+        if np.all(
+            (np.any(_updated_upa[i] == 1))
+            & ((_updated_upa[i] >= 1) | (max_cover_role_array != 1))
+        ):
+            ua_dict[i + 1].append(max_cover_role)
             _updated_upa[i] = np.where(max_cover_role_array == 1, 2, _updated_upa[i])
+
+    # Remove max_cover_role from potential roles list
     updated_list_of_roles = np.array(
         [
             role
@@ -121,37 +133,7 @@ def get_max_cover_role(upa: np.ndarray, list_of_roles: np.ndarray):
             if not np.array_equal(role, max_cover_role_array)
         ]
     )
-    return max_cover_role, _updated_upa, updated_list_of_roles
-
-
-def apply_max_cover_role(
-    upa: np.ndarray, role_count_with_label: Dict[Tuple, Dict]
-) -> tuple[tuple, ndarray, dict[tuple, tuple[int, ...]]]:
-    # Calculate role covered area
-    role_count = {
-        role["role"]: role["count"] for role in role_count_with_label.values()
-    }
-    roles_by_covered_area = sort_dict_by_value(
-        {role: get_role_cover_area(role, count) for role, count in role_count.items()}
-    )
-    max_cover_role, covered_area = next(iter(roles_by_covered_area.items()))
-    max_cover_role_array = np.array(max_cover_role)
-    _updated_upa = upa.copy()
-
-    for i in range(_updated_upa.shape[0]):
-        _updated_upa[i] = np.where(
-            (_updated_upa[i] == 1) & (max_cover_role_array == 1), 2, _updated_upa[i]
-        )
-
-    updated_role_list = {
-        role: roles_subtraction(role, max_cover_role)
-        for role in role_count.keys()
-        if role != max_cover_role
-    }
-    _chosen_role = next(
-        k for k, v in role_count_with_label.items() if v["role"] == max_cover_role
-    )
-    return _chosen_role, _updated_upa, updated_role_list
+    return max_cover_role, _updated_upa, updated_list_of_roles, ua_dict
 
 
 if __name__ == "__main__":
@@ -176,7 +158,7 @@ if __name__ == "__main__":
     print(total_count)
 
     print("RMP iteration")
-    chosen_role, updated_upa, updated_roles = get_max_cover_role(upa, gen_roles)
+    chosen_role, updated_upa, updated_roles, ua = get_max_cover_role(upa, gen_roles)
     print(chosen_role)
     print(updated_upa)
     print(updated_roles)
