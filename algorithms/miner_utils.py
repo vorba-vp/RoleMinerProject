@@ -125,32 +125,39 @@ def process_row(i, row, max_cover_role_array, max_cover_role) -> tuple:
 
 
 def get_max_cover_role(upa: np.ndarray, list_of_roles: np.ndarray):
-    # Get sorted list of roles by cover of area of UPA
+    # Step 1: Calculate the role cover areas in parallel
     result = Parallel(n_jobs=NUM_OF_PARALLEL_JOBS)(
         delayed(get_role_cover_area)(upa, role) for role in list_of_roles
     )
-    roles_by_cover_area = sort_dict_by_value(dict(result))
 
-    # Get max cover role
+    # Convert result into a dictionary and sort by cover area
+    roles_by_cover_area = dict(result)
+    roles_by_cover_area = sort_dict_by_value(roles_by_cover_area)
+
+    # Step 2: Identify the role with the maximum cover area
     max_cover_role, covered_area = next(iter(roles_by_cover_area.items()))
     max_cover_role_array = np.array(max_cover_role)
 
-    # Update UPA
-    # Mark users that max_cover_role applied to them. Users permissions match the role marked by "2"
-    _updated_upa = upa.copy()
+    # Step 3: Update UPA in parallel
+    _updated_upa = upa.copy()  # Copy the UPA array only once
+
+    # Process each row of UPA in parallel
     results = Parallel(n_jobs=NUM_OF_PARALLEL_JOBS)(
         delayed(process_row)(i, _updated_upa[i], max_cover_role_array, max_cover_role)
         for i in range(_updated_upa.shape[0])
     )
 
+    # Step 4: Aggregate results
     ua_dict: dict[tuple, list] = defaultdict(list)
     for i, local_dict, updated_row in results:
-        ua_dict.update(local_dict)
-        _updated_upa[i] = updated_row
+        ua_dict.update(local_dict)  # Update the user-role assignments
+        _updated_upa[i] = updated_row  # Update UPA with processed rows
 
-    # Remove max_cover_role from potential roles list
+    # Step 5: Filter out the max cover role from the list of roles
+    # Use boolean indexing to filter out the roles without copying the entire array
     mask = ~np.all(list_of_roles == max_cover_role_array, axis=1)
     updated_list_of_roles = list_of_roles[mask]
+
     return max_cover_role, _updated_upa, updated_list_of_roles, ua_dict
 
 

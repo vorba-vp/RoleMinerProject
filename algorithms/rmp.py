@@ -17,23 +17,35 @@ def basic_rmp(upa: np.ndarray, delta_factor: int = 0):
     pa_list = []
     ua_dict = defaultdict(list)
 
+    # Cache roles_label_mapping within the loop to avoid re-computation
+    roles_label_mapping = {}
+
+    # Main loop
     while np.sum(updated_upa == 1) > delta_factor:
         role, updated_upa, gen_roles_list, users_list = get_max_cover_role(
             updated_upa, gen_roles_list
         )
-        pa_list.append(get_role_label_with_cache(role))
+        role_label = get_role_label_with_cache(role)
+
+        # Add the role to pa_list and update mapping
+        pa_list.append(role_label)
+
+        # Ensure roles_label_mapping is populated only once per role
+        if role_label not in roles_label_mapping:
+            roles_label_mapping[role_label] = f"R{len(pa_list)}"
+
+        # Update ua_dict efficiently with batched list extensions
         for k, v in users_list.items():
             ua_dict[k].extend([get_role_label_with_cache(r) for r in v])
-    sorted_ua_dict = dict(sorted(ua_dict.items()))
-    pa_matrix = {}
-    roles_label_mapping = {}
-    for i, r in enumerate(pa_list):
-        role_label = f"R{i+1}"
-        pa_matrix[role_label] = r.split(",")
-        roles_label_mapping[r] = role_label
-    ua_matrix = {}
-    for k, v in sorted_ua_dict.items():
-        ua_matrix[f"U{k}"] = [roles_label_mapping[r] for r in v]
+
+    # Create pa_matrix from pa_list and roles_label_mapping
+    pa_matrix = {roles_label_mapping[r]: r.split(",") for r in pa_list}
+
+    # Sort ua_dict once and create ua_matrix
+    ua_matrix = {
+        f"U{k}": [roles_label_mapping[r] for r in v] for k, v in sorted(ua_dict.items())
+    }
+
     return pa_matrix, ua_matrix
 
 
