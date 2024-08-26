@@ -1,15 +1,17 @@
 import os
 from collections import defaultdict
-from unittest import mock
 
 import numpy as np
+from line_profiler import profile
 
 from algorithms.fast_miner import get_fast_miner_result
 from algorithms.miner_utils import get_max_cover_role, get_role_label_with_cache
 
 
+@profile
 def basic_rmp(upa: np.ndarray, delta_factor: int = 0):
     gen_roles, calc_time = get_fast_miner_result(upa)
+    print()
     print(f"\tFastMiner calc time: {calc_time} seconds")
     gen_roles_list = np.array(list(gen_roles.keys()))
 
@@ -45,7 +47,6 @@ def basic_rmp(upa: np.ndarray, delta_factor: int = 0):
     ua_matrix = {
         f"U{k}": [roles_label_mapping[r] for r in v] for k, v in sorted(ua_dict.items())
     }
-
     return pa_matrix, ua_matrix
 
 
@@ -60,33 +61,11 @@ if __name__ == "__main__":
     for dataset in datasets_list:
         print()
         print(f"Dataset: {dataset}")
-        with mock.patch("algorithms.miner_utils.NUM_OF_PARALLEL_JOBS", 1):
-            start_time = time.time()
-            upa = load_upa_from_one2one_file(f"{datasets_dir}/{dataset}")
-            basic_rmp(upa)
-            print(f"\tTotal time: {time.time() - start_time} seconds")
-            print()
-
-        with mock.patch("algorithms.miner_utils.NUM_OF_PARALLEL_JOBS", 2):
-            start_time = time.time()
-            upa = load_upa_from_one2one_file(f"{datasets_dir}/{dataset}")
-            basic_rmp(upa)
-            print(f"\tTotal time: {time.time() - start_time} seconds")
-            print()
-
-        with mock.patch("algorithms.miner_utils.NUM_OF_PARALLEL_JOBS", 4):
-            start_time = time.time()
-            upa = load_upa_from_one2one_file(f"{datasets_dir}/{dataset}")
-            basic_rmp(upa)
-            print(f"\tTotal time: {time.time() - start_time} seconds")
-            print()
-
-        with mock.patch("algorithms.miner_utils.NUM_OF_PARALLEL_JOBS", -1):
-            start_time = time.time()
-            upa = load_upa_from_one2one_file(f"{datasets_dir}/{dataset}")
-            basic_rmp(upa)
-            print(f"\tTotal time: {time.time() - start_time} seconds")
-            print()
+        start_time = time.time()
+        upa = load_upa_from_one2one_file(f"{datasets_dir}/{dataset}")
+        basic_rmp(upa)
+        print(f"\tTotal time: {time.time() - start_time} seconds")
+        print()
 
     # pa, ua = basic_rmp(upa, delta_factor=1)
     # print("UPA matrix")

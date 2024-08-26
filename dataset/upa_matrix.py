@@ -12,7 +12,6 @@ MIN_PERMISSIONS_PER_ROLE = config.getint("permissions", "min_per_role")
 
 
 def load_upa_from_one2one_file(filename: str) -> np.ndarray:
-
     # Using a set to hold unique user and permission numbers for calculating the size of the matrix
     user_set, permission_set = set(), set()
 
@@ -70,8 +69,6 @@ def generate_pa_matrix(
     roles = np.zeros((num_of_roles, num_of_permissions), dtype=int)
     for r in range(num_of_roles):
         nrt = random.randint(MIN_PERMISSIONS_PER_ROLE, max_permissions_per_role)
-        role = np.zeros(num_of_permissions, dtype=int)
-
         random_positions = random.sample(range(num_of_permissions), nrt)
         for pos in random_positions:
             roles[r, pos] = 1

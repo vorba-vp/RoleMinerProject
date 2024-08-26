@@ -1,24 +1,16 @@
-import copy
 from collections import defaultdict
 from functools import lru_cache
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 import numpy as np
-from joblib import Parallel, delayed
-from numpy import ndarray
+from line_profiler import profile
 
 from algorithms.utils_func import sort_dict_by_value
-from dataset.upa_matrix import generate_upa_matrix, load_upa_from_one2one_file
-
-NUM_OF_PARALLEL_JOBS = 4
+from dataset.upa_matrix import load_upa_from_one2one_file
 
 
 class FastMinerException(Exception):
     pass
-
-
-def array_to_tuple(arr: np.ndarray) -> tuple:
-    return tuple(arr)
 
 
 @lru_cache(maxsize=None)  # Cache with unlimited size
@@ -27,62 +19,81 @@ def get_role_label(role: tuple) -> str:
 
 
 def get_role_label_with_cache(role: np.ndarray) -> str:
-    role_tuple = array_to_tuple(role)
+    role_tuple = tuple(role)
     return get_role_label(role_tuple)
 
 
 # region: Fast Miner Utils functions
 def get_init_roles(upa: np.ndarray) -> Tuple[np.ndarray | None, Dict]:
     num_of_users, num_of_permissions = upa.shape
-    if not num_of_users or not num_of_permissions:
+
+    if num_of_users == 0 or num_of_permissions == 0:
         raise FastMinerException("UPA must have non-zero dimensions")
-    init_roles_set: np.ndarray | None = None
+
     roles_set = set()
-    original_count: Dict[Tuple, int] = defaultdict(int)
+    original_count: Dict[Tuple[int], int] = defaultdict(int)
+    unique_roles = []
+
     for u in upa:
         u_label = tuple(u)
         original_count[u_label] += 1
-        if u_label in roles_set:
-            continue
-        else:
+
+        if u_label not in roles_set:
             roles_set.add(u_label)
-            init_roles_set = (
-                np.vstack((init_roles_set, u)) if init_roles_set is not None else u
-            )
+            unique_roles.append(u)
+
+    init_roles_set = np.array(unique_roles) if unique_roles else None
+
     return init_roles_set, dict(original_count)
 
 
 def get_fm_gen_roles(init_roles: np.ndarray) -> np.ndarray | None:
-    temp_init_roles = copy.deepcopy(init_roles)
-    gen_roles: np.ndarray | None = None
+    # Make a shallow copy of the input if mutation needs to be avoided.
+    temp_init_roles = init_roles.copy()
+
+    # Initialize generated roles and a set for uniqueness check.
+    gen_roles = []
     roles_set = set()
+
     while len(temp_init_roles) > 0:
         candidate_role = temp_init_roles[0]
         temp_init_roles = temp_init_roles[1:]
-        if tuple(candidate_role) not in roles_set:
-            gen_roles = (
-                np.vstack((gen_roles, candidate_role))
-                if gen_roles is not None
-                else candidate_role
-            )
-            roles_set.add(tuple(candidate_role))
-        for role in temp_init_roles:
-            intersection = np.bitwise_and(role, candidate_role)
-            if intersection.sum() > 0 and tuple(intersection) not in roles_set:
-                roles_set.add(tuple(intersection))
-                gen_roles = np.vstack((gen_roles, intersection))
-    return gen_roles
+
+        # Check and add the candidate role to gen_roles if not already present.
+        role_tuple = tuple(candidate_role)
+        if role_tuple not in roles_set:
+            gen_roles.append(candidate_role)
+            roles_set.add(role_tuple)
+
+        # Generate new roles by intersecting candidate_role with other roles.
+        new_roles = [
+            np.bitwise_and(role, candidate_role)
+            for role in temp_init_roles
+            if (intersection := np.bitwise_and(role, candidate_role)).sum() > 0
+            and tuple(intersection) not in roles_set
+        ]
+
+        # Add the new roles to gen_roles and roles_set.
+        for new_role in new_roles:
+            gen_roles.append(new_role)
+            roles_set.add(tuple(new_role))
+
+    return np.array(gen_roles) if gen_roles else None
 
 
 def get_fm_candidate_roles_total_count(
     upa: np.ndarray, gen_roles: np.ndarray
 ) -> Dict[Tuple, int]:
+    # Initialize the defaultdict to store counts
     total_count: Dict[Tuple, int] = defaultdict(int)
 
+    # Iterate through each generated role
     for r in gen_roles:
-        for u in upa:
-            if np.array_equal(np.bitwise_and(r, u), r):
-                total_count[tuple(r)] += 1
+        # Use broadcasting and vectorization to apply bitwise_and across all rows in upa
+        mask = np.all(np.bitwise_and(upa, r) == r, axis=1)
+
+        # Count the occurrences of rows that satisfy the condition
+        total_count[tuple(r)] += np.sum(mask)
 
     return sort_dict_by_value(total_count)
 
@@ -93,23 +104,20 @@ def get_fm_candidate_roles_total_count(
 
 
 def get_role_cover_area(upa: np.ndarray, role: np.ndarray) -> tuple:
-    count = 0
-    for row in upa:
-        if all([r_i >= p for r_i, p in zip(row, role)]):
-            for r_i, p in zip(row, role):
-                if r_i == 1 and p == 1:
-                    count += 1
+    # Convert role to a boolean mask
+    role_mask = role == 1
+
+    # Find valid rows where all elements are >= the corresponding role elements
+    valid_rows = np.all(upa[:, role_mask] >= role[role_mask], axis=1)
+
+    # Count the number of ones in valid rows for the masked columns
+    count = np.sum(upa[valid_rows][:, role_mask] == 1)
+
     return tuple(role), count
 
 
-def roles_subtraction(a: Tuple[int], b: Tuple[int]) -> tuple[int, ...]:
-    result: List[int] = []
-    for i in range(len(a)):
-        if a[i] == 1 and b[i] == 1:
-            result.append(0)
-        else:
-            result.append(a[i])
-    return tuple(result)
+def roles_subtraction(a: Tuple[int, ...], b: Tuple[int, ...]) -> Tuple[int, ...]:
+    return tuple(0 if x == 1 and y == 1 else x for x, y in zip(a, b))
 
 
 def process_row(i, row, max_cover_role_array, max_cover_role) -> tuple:
@@ -124,11 +132,10 @@ def process_row(i, row, max_cover_role_array, max_cover_role) -> tuple:
     return i, ua_dict_local, updated_row
 
 
+@profile
 def get_max_cover_role(upa: np.ndarray, list_of_roles: np.ndarray):
-    # Step 1: Calculate the role cover areas in parallel
-    result = Parallel(n_jobs=NUM_OF_PARALLEL_JOBS)(
-        delayed(get_role_cover_area)(upa, role) for role in list_of_roles
-    )
+    # Step 1: Calculate the role cover areas sequentially
+    result = [get_role_cover_area(upa, role) for role in list_of_roles]
 
     # Convert result into a dictionary and sort by cover area
     roles_by_cover_area = dict(result)
@@ -141,11 +148,11 @@ def get_max_cover_role(upa: np.ndarray, list_of_roles: np.ndarray):
     # Step 3: Update UPA in parallel
     _updated_upa = upa.copy()  # Copy the UPA array only once
 
-    # Process each row of UPA in parallel
-    results = Parallel(n_jobs=NUM_OF_PARALLEL_JOBS)(
-        delayed(process_row)(i, _updated_upa[i], max_cover_role_array, max_cover_role)
+    # Process each row of UPA sequentially
+    results = [
+        process_row(i, _updated_upa[i], max_cover_role_array, max_cover_role)
         for i in range(_updated_upa.shape[0])
-    )
+    ]
 
     # Step 4: Aggregate results
     ua_dict: dict[tuple, list] = defaultdict(list)

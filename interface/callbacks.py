@@ -27,7 +27,6 @@ def get_data(dataset: str) -> np.ndarray:
 
 
 def register_control_callbacks(app: Dash) -> None:
-
     @app.callback(
         [
             Output("upa-table", "columns"),
