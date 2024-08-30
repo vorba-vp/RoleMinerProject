@@ -1,7 +1,7 @@
 import numpy as np
 from dash import Dash, Input, Output, State
 
-from algorithms.fast_miner import get_fast_miner_result
+from algorithms.fast_miner import get_fast_miner_result_with_metadata
 from dataset import upa_matrix
 
 DATASET_MAPPING = {
@@ -67,7 +67,7 @@ def register_control_callbacks(app: Dash) -> None:
                 for index, row in enumerate(data)
             ]
 
-            fm_result, fm_time = get_fast_miner_result(data)
+            fm_result, fm_time = get_fast_miner_result_with_metadata(data)
             fm_result_table_data = [row for row in fm_result.values()]
 
             fm_columns = (

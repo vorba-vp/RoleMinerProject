@@ -48,32 +48,25 @@ def get_init_roles(upa: np.ndarray) -> Tuple[np.ndarray | None, Dict]:
 
 
 def get_fm_gen_roles(init_roles: np.ndarray) -> np.ndarray | None:
-    # Make a shallow copy of the input if mutation needs to be avoided.
-    temp_init_roles = init_roles.copy()
-
-    # Initialize generated roles and a set for uniqueness check.
-    gen_roles = []
+    # Use a set to track unique roles as tuples for fast lookups.
     roles_set = set()
+    gen_roles = []
 
-    while len(temp_init_roles) > 0:
-        candidate_role = temp_init_roles[0]
-        temp_init_roles = temp_init_roles[1:]
-
-        # Check and add the candidate role to gen_roles if not already present.
+    # Iterate over the roles in the initial array.
+    for i, candidate_role in enumerate(init_roles):
         role_tuple = tuple(candidate_role)
         if role_tuple not in roles_set:
             gen_roles.append(candidate_role)
             roles_set.add(role_tuple)
 
-        # Generate new roles by intersecting candidate_role with other roles.
-        new_roles = [
-            np.bitwise_and(role, candidate_role)
-            for role in temp_init_roles
-            if (intersection := np.bitwise_and(role, candidate_role)).sum() > 0
-            and tuple(intersection) not in roles_set
-        ]
+        # Calculate the intersection (bitwise AND) of the candidate role with the remaining roles.
+        intersections = np.bitwise_and(init_roles[i + 1:], candidate_role)
 
-        # Add the new roles to gen_roles and roles_set.
+        # Filter out zero-sum intersections and duplicates.
+        non_zero_intersections = intersections[np.any(intersections, axis=1)]
+        new_roles = [role for role in non_zero_intersections if tuple(role) not in roles_set]
+
+        # Add the new unique roles to the generated roles list and the roles_set.
         for new_role in new_roles:
             gen_roles.append(new_role)
             roles_set.add(tuple(new_role))
@@ -103,7 +96,7 @@ def get_fm_candidate_roles_total_count(
 # TODO: tests
 
 
-def get_role_cover_area(upa: np.ndarray, role: np.ndarray) -> tuple:
+def get_role_cover_area(upa: np.ndarray, role: np.ndarray) -> tuple[tuple, int]:
     # Convert role to a boolean mask
     role_mask = role == 1
 
@@ -123,7 +116,9 @@ def roles_subtraction(a: Tuple[int, ...], b: Tuple[int, ...]) -> Tuple[int, ...]
 def process_row(i, row, max_cover_role_array, max_cover_role) -> tuple:
     ua_dict_local = defaultdict(list)
 
-    if np.all((np.any(row == 1)) & ((row >= 1) | (max_cover_role_array != 1))):
+    # Determine if the row should be updated
+    if np.any(row == 1) and np.all((row >= 1) | (max_cover_role_array != 1)):
+        # Update ua_dict_local and the row
         ua_dict_local[i + 1].append(max_cover_role)
         updated_row = np.where(max_cover_role_array == 1, 2, row)
     else:
@@ -133,39 +128,67 @@ def process_row(i, row, max_cover_role_array, max_cover_role) -> tuple:
 
 
 @profile
-def get_max_cover_role(upa: np.ndarray, list_of_roles: np.ndarray):
-    # Step 1: Calculate the role cover areas sequentially
-    result = [get_role_cover_area(upa, role) for role in list_of_roles]
+def get_max_cover_role(
+    upa: np.ndarray,
+    list_of_roles: np.ndarray,
+    prev_covered_areas: dict,
+    delta_factor: int = 0,
+):
+    covered_area = 0
+    max_cover_role = None
+    max_area = np.sum(upa)
 
-    # Convert result into a dictionary and sort by cover area
-    roles_by_cover_area = dict(result)
-    roles_by_cover_area = sort_dict_by_value(roles_by_cover_area)
+    for role in list_of_roles:
+        role_key = tuple(role)
 
-    # Step 2: Identify the role with the maximum cover area
-    max_cover_role, covered_area = next(iter(roles_by_cover_area.items()))
+        # Skip roles that have already been processed with worse or equal coverage
+        if (
+            role_key in prev_covered_areas
+            and prev_covered_areas[role_key] <= covered_area
+        ):
+            continue
+
+        # Compute the cover area for the current role
+        _role, _covered_area = get_role_cover_area(upa, role)
+
+        # Store the covered area for this role
+        prev_covered_areas[role_key] = _covered_area
+
+        # Update the max cover role if the current one is better
+        if _covered_area > covered_area:
+            max_cover_role = _role
+            covered_area = _covered_area
+
+        # Early exit if the current covered area is sufficient
+        if covered_area >= max_area - delta_factor:
+            break
+
+    # Convert max_cover_role to a numpy array
     max_cover_role_array = np.array(max_cover_role)
 
-    # Step 3: Update UPA in parallel
-    _updated_upa = upa.copy()  # Copy the UPA array only once
+    # Update UPA without parallel processing
+    _updated_upa = upa.copy()
 
-    # Process each row of UPA sequentially
-    results = [
-        process_row(i, _updated_upa[i], max_cover_role_array, max_cover_role)
-        for i in range(_updated_upa.shape[0])
-    ]
-
-    # Step 4: Aggregate results
     ua_dict: dict[tuple, list] = defaultdict(list)
-    for i, local_dict, updated_row in results:
-        ua_dict.update(local_dict)  # Update the user-role assignments
-        _updated_upa[i] = updated_row  # Update UPA with processed rows
+    for i in range(_updated_upa.shape[0]):
+        # Process each row and update UPA
+        local_dict, updated_row = process_row(
+            i, _updated_upa[i], max_cover_role_array, max_cover_role
+        )[1:]
+        ua_dict.update(local_dict)
+        _updated_upa[i] = updated_row
 
-    # Step 5: Filter out the max cover role from the list of roles
-    # Use boolean indexing to filter out the roles without copying the entire array
-    mask = ~np.all(list_of_roles == max_cover_role_array, axis=1)
+    # Filter out the max cover role from the list of roles
+    mask = ~np.all((list_of_roles >= max_cover_role_array) & (list_of_roles == max_cover_role_array), axis=1)
     updated_list_of_roles = list_of_roles[mask]
 
-    return max_cover_role, _updated_upa, updated_list_of_roles, ua_dict
+    return (
+        max_cover_role,
+        _updated_upa,
+        updated_list_of_roles,
+        ua_dict,
+        prev_covered_areas,
+    )
 
 
 if __name__ == "__main__":

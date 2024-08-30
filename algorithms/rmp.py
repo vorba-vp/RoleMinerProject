@@ -1,19 +1,20 @@
 import os
+import time
 from collections import defaultdict
 
 import numpy as np
 from line_profiler import profile
 
-from algorithms.fast_miner import get_fast_miner_result
+from algorithms.fast_miner import get_fast_miner_result_with_metadata, get_fast_miner_result
 from algorithms.miner_utils import get_max_cover_role, get_role_label_with_cache
 
 
 @profile
 def basic_rmp(upa: np.ndarray, delta_factor: int = 0):
-    gen_roles, calc_time = get_fast_miner_result(upa)
+    start_time = time.time()
+    gen_roles_list = get_fast_miner_result(upa)
     print()
-    print(f"\tFastMiner calc time: {calc_time} seconds")
-    gen_roles_list = np.array(list(gen_roles.keys()))
+    print(f"\tFastMiner calc time: {time.time() - start_time} seconds")
 
     updated_upa = upa.copy()
     pa_list = []
@@ -23,9 +24,12 @@ def basic_rmp(upa: np.ndarray, delta_factor: int = 0):
     roles_label_mapping = {}
 
     # Main loop
+    roles_cover_map: dict[tuple, int] = {}
     while np.sum(updated_upa == 1) > delta_factor:
-        role, updated_upa, gen_roles_list, users_list = get_max_cover_role(
-            updated_upa, gen_roles_list
+        role, updated_upa, gen_roles_list, users_list, roles_cover_map = (
+            get_max_cover_role(
+                updated_upa, gen_roles_list, roles_cover_map, delta_factor
+            )
         )
         role_label = get_role_label_with_cache(role)
 
@@ -57,7 +61,7 @@ if __name__ == "__main__":
 
     datasets_dir = "dataset/real_datasets"
     datasets_list = os.listdir(datasets_dir)
-    datasets_list.reverse()
+    # datasets_list.reverse()
     for dataset in datasets_list:
         print()
         print(f"Dataset: {dataset}")
