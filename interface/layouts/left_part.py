@@ -1,6 +1,6 @@
 from dash import dash_table, dcc, html
 
-left_part_layout = html.Div(
+upa_matrix_layout = html.Div(
     children=[
         html.H2("UPA Table"),
         dcc.Loading(

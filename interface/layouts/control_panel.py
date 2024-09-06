@@ -24,7 +24,7 @@ control_panel_layout = html.Div(
                     style={"width": "200px"},
                 ),
                 html.Button(
-                    "Show UPA", id="show-upa-button", style={"margin-left": "30px"}
+                    "Show Result", id="show-upa-button", style={"margin-left": "30px"}
                 ),
             ],
             style={"display": "flex"},

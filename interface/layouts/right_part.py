@@ -1,6 +1,6 @@
 from dash import dash_table, dcc, html
 
-right_part_layout = html.Div(
+fast_miner_result_layout = html.Div(
     children=[
         html.H2("FastMiner Result"),
         dcc.Loading(

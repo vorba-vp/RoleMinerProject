@@ -29,10 +29,11 @@ def get_fast_miner_result_with_metadata(upa: np.ndarray) -> Tuple[Dict, float]:
     return result, time.time() - start_time
 
 
-def get_fast_miner_result(upa: np.ndarray) -> list:
+def get_fast_miner_result(upa: np.ndarray) -> np.ndarray | None:
     init_roles, _ = get_init_roles(upa)
     gen_roles = get_fm_gen_roles(init_roles)
     return gen_roles
+
 
 if __name__ == "__main__":
     from dataset.upa_matrix import load_upa_from_one2one_file

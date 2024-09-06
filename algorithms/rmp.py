@@ -5,7 +5,7 @@ from collections import defaultdict
 import numpy as np
 from line_profiler import profile
 
-from algorithms.fast_miner import get_fast_miner_result_with_metadata, get_fast_miner_result
+from algorithms.fast_miner import get_fast_miner_result
 from algorithms.miner_utils import get_max_cover_role, get_role_label_with_cache
 
 
@@ -51,6 +51,9 @@ def basic_rmp(upa: np.ndarray, delta_factor: int = 0):
     ua_matrix = {
         f"U{k}": [roles_label_mapping[r] for r in v] for k, v in sorted(ua_dict.items())
     }
+
+    print(f"\tNumber of roles: {len(pa_matrix.keys())}")
+
     return pa_matrix, ua_matrix
 
 
@@ -61,7 +64,7 @@ if __name__ == "__main__":
 
     datasets_dir = "dataset/real_datasets"
     datasets_list = os.listdir(datasets_dir)
-    # datasets_list.reverse()
+    datasets_list.reverse()
     for dataset in datasets_list:
         print()
         print(f"Dataset: {dataset}")

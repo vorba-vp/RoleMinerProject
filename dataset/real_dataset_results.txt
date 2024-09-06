@@ -1,0 +1,61 @@
+Dataset: healthcare.txt
+
+	FastMiner calc time: 0.0 seconds
+	Number of roles: 17
+	Total time: 0.011398553848266602 seconds
+
+
+Dataset: firewall-2.txt
+
+	FastMiner calc time: 0.011640310287475586 seconds
+	Number of roles: 10
+	Total time: 0.1096808910369873 seconds
+
+
+Dataset: firewall-1.txt
+
+	FastMiner calc time: 0.07287049293518066 seconds
+	Number of roles: 66
+	Total time: 1.1590003967285156 seconds
+
+
+Dataset: emea.txt
+
+	FastMiner calc time: 0.07757282257080078 seconds
+	Number of roles: 43
+	Total time: 1.859025001525879 seconds
+
+
+Dataset: domino.txt
+
+	FastMiner calc time: 0.0019979476928710938 seconds
+	Number of roles: 21
+	Total time: 0.03073596954345703 seconds
+
+
+Dataset: customer.txt
+
+	FastMiner calc time: 93.50205063819885 seconds
+	Number of roles: 294
+	Total time: 500.64585733413696 seconds
+
+
+Dataset: apj.txt
+
+	FastMiner calc time: 1.0713739395141602 seconds
+	Number of roles: 465
+	Total time: 23.9938747882843 seconds
+
+
+Dataset: americas_small.txt
+
+	FastMiner calc time: 1.2909271717071533 seconds
+	Number of roles: 197
+	Total time: 62.26174759864807 seconds
+
+
+Dataset: americas_large.txt
+
+	FastMiner calc time: 16.0067400932312 seconds
+	Number of roles: 562
+	Total time: 2686.8369464874268 seconds

@@ -60,11 +60,13 @@ def get_fm_gen_roles(init_roles: np.ndarray) -> np.ndarray | None:
             roles_set.add(role_tuple)
 
         # Calculate the intersection (bitwise AND) of the candidate role with the remaining roles.
-        intersections = np.bitwise_and(init_roles[i + 1:], candidate_role)
+        intersections = np.bitwise_and(init_roles[i + 1 :], candidate_role)
 
         # Filter out zero-sum intersections and duplicates.
         non_zero_intersections = intersections[np.any(intersections, axis=1)]
-        new_roles = [role for role in non_zero_intersections if tuple(role) not in roles_set]
+        new_roles = [
+            role for role in non_zero_intersections if tuple(role) not in roles_set
+        ]
 
         # Add the new unique roles to the generated roles list and the roles_set.
         for new_role in new_roles:
@@ -179,7 +181,11 @@ def get_max_cover_role(
         _updated_upa[i] = updated_row
 
     # Filter out the max cover role from the list of roles
-    mask = ~np.all((list_of_roles >= max_cover_role_array) & (list_of_roles == max_cover_role_array), axis=1)
+    mask = ~np.all(
+        (list_of_roles >= max_cover_role_array)
+        & (list_of_roles == max_cover_role_array),
+        axis=1,
+    )
     updated_list_of_roles = list_of_roles[mask]
 
     return (

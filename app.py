@@ -4,8 +4,8 @@ from dash import dash, html
 
 from interface.callbacks import register_control_callbacks
 from interface.layouts.control_panel import control_panel_layout
-from interface.layouts.left_part import left_part_layout
-from interface.layouts.right_part import right_part_layout
+from interface.layouts.left_part import upa_matrix_layout
+from interface.layouts.right_part import fast_miner_result_layout
 
 
 def main() -> dash.Dash:
@@ -18,9 +18,9 @@ def main() -> dash.Dash:
             html.Div(
                 children=[
                     # Left part of the bottom section
-                    left_part_layout,
+                    upa_matrix_layout,
                     # Right part of the bottom section
-                    right_part_layout,
+                    fast_miner_result_layout,
                 ],
                 style={"display": "flex", "flex-direction": "column"},
             ),
