@@ -3,7 +3,6 @@ from functools import lru_cache
 from typing import Dict, Tuple
 
 import numpy as np
-from line_profiler import profile
 
 from algorithms.utils_func import sort_dict_by_value
 from dataset.upa_matrix import load_upa_from_one2one_file
@@ -129,7 +128,6 @@ def process_row(i, row, max_cover_role_array, max_cover_role) -> tuple:
     return i, ua_dict_local, updated_row
 
 
-@profile
 def get_max_cover_role(
     upa: np.ndarray,
     list_of_roles: np.ndarray,
@@ -219,7 +217,9 @@ if __name__ == "__main__":
     print(total_count)
 
     print("RMP iteration")
-    chosen_role, updated_upa, updated_roles, ua = get_max_cover_role(upa, gen_roles)
+    chosen_role, updated_upa, updated_roles, ua, updated_areas = get_max_cover_role(
+        upa, gen_roles, {}
+    )
     print(chosen_role)
     print(updated_upa)
     print(updated_roles)

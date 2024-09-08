@@ -1,15 +1,12 @@
 import os
-import time
 from collections import defaultdict
 
 import numpy as np
-from line_profiler import profile
 
 from algorithms.fast_miner import get_fast_miner_result
 from algorithms.miner_utils import get_max_cover_role, get_role_label_with_cache
 
 
-@profile
 def basic_rmp(upa: np.ndarray, delta_factor: int = 0):
     start_time = time.time()
     gen_roles_list = get_fast_miner_result(upa)
