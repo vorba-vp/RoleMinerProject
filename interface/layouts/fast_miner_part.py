@@ -14,6 +14,16 @@ fast_miner_result_layout = html.Div(
                     row_selectable="single",
                     style_cell={"textAlign": "left"},
                     sort_action="native",
+                    page_size=20,
+                    style_data_conditional=[
+                        {
+                            "if": {
+                                "filter_query": '{label} = ""'
+                            },  # Apply to empty rows
+                            "backgroundColor": "#f9f9f9",
+                            "color": "#f9f9f9",
+                        }
+                    ],
                 ),
                 html.Div(id="calc-time", style={"marginTop": "20px"}),
             ],

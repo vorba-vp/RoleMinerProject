@@ -1,7 +1,10 @@
+import time
+
 import numpy as np
 from dash import Dash, Input, Output, State
 
 from algorithms.fast_miner import get_fast_miner_result_with_metadata
+from algorithms.rmp import basic_rmp
 from dataset import upa_matrix
 
 DATASET_MAPPING = {
@@ -67,8 +70,34 @@ def register_control_callbacks(app: Dash) -> None:
                 for index, row in enumerate(data)
             ]
 
+            # Add padding rows to ensure the table always has 50 rows per page
+            page_size = 20
+            if len(data_list) > page_size and len(data_list) % page_size != 0:
+                # Calculate how many padding rows are needed
+                padding_rows = page_size - len(data_list) % page_size
+                # Add empty rows for padding
+                data_list.extend(
+                    [
+                        {"p_0": "", **{f"p_{i + 1}": "" for i in range(data.shape[1])}}
+                        for _ in range(padding_rows)
+                    ]
+                )
+
             fm_result, fm_time = get_fast_miner_result_with_metadata(data)
             fm_result_table_data = [row for row in fm_result.values()]
+
+            page_size = 20
+            if (
+                len(fm_result_table_data) > page_size
+                and len(fm_result_table_data) % page_size != 0
+            ):
+                # Calculate how many padding rows are needed
+                padding_rows = page_size - len(fm_result_table_data) % page_size
+                # Add empty rows
+                fm_result_table_data.extend(
+                    [{"label": "", "original_count": "", "total_count": ""}]
+                    * padding_rows
+                )
 
             fm_columns = (
                 [
@@ -129,3 +158,68 @@ def register_control_callbacks(app: Dash) -> None:
                             }
                         )
         return style_data_conditional
+
+    @app.callback(
+        [
+            Output("pa-matrix-table", "columns"),
+            Output("pa-matrix-table", "data"),
+            Output("ua-matrix-table", "columns"),
+            Output("ua-matrix-table", "data"),
+            Output("rmp-calc-time", "children"),
+        ],
+        [Input("show-upa-button", "n_clicks")],
+        [State("dataset-dropdown", "value"), State("upa-table", "data")],
+    )
+    def update_rmp_results(n_clicks, dataset, upa_table_data):
+        if n_clicks and dataset:
+            # Retrieve the UPA matrix data from the selected dataset
+            data = get_data(dataset)
+
+            if data.size == 0:
+                return [], [], [], [], "Warning: Invalid dataset selected."
+
+            # Run the RMP algorithm
+            start_time = time.time()
+            pa_matrix, ua_matrix = basic_rmp(data)
+            calc_time = time.time() - start_time
+
+            # Prepare PA matrix data for display
+            pa_matrix_data = [
+                {"Role": k, "Permissions": ", ".join(v)} for k, v in pa_matrix.items()
+            ]
+            pa_columns = [
+                {"name": "Role", "id": "Role"},
+                {"name": "Permissions", "id": "Permissions"},
+            ]
+
+            # Prepare UA matrix data for display
+            ua_matrix_data = [
+                {"User": k, "Roles": ", ".join(v)} for k, v in ua_matrix.items()
+            ]
+            ua_columns = [
+                {"name": "User", "id": "User"},
+                {"name": "Roles", "id": "Roles"},
+            ]
+
+            page_size = 20
+            if len(ua_matrix_data) > page_size and len(ua_matrix_data) % page_size != 0:
+                # Calculate how many padding rows are needed
+                padding_rows = page_size - len(ua_matrix_data) % page_size
+                # Add empty rows
+                ua_matrix_data.extend([{"User": "", "Roles": ""}] * padding_rows)
+
+            if len(pa_matrix_data) > page_size and len(pa_matrix_data) % page_size != 0:
+                # Calculate how many padding rows are needed
+                padding_rows = page_size - len(pa_matrix_data) % page_size
+                # Add empty rows
+                pa_matrix_data.extend([{"Role": "", "Permissions": ""}] * padding_rows)
+
+            return (
+                pa_columns,
+                pa_matrix_data,
+                ua_columns,
+                ua_matrix_data,
+                f"RMP Calculation Time: {calc_time:.2f} seconds",
+            )
+
+        return [], [], [], [], ""

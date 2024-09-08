@@ -27,6 +27,7 @@ upa_matrix_layout = html.Div(
                             "width": "85px",
                         }
                     ],
+                    page_size=20,
                 ),
             ],
         ),
