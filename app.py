@@ -24,6 +24,7 @@ def main() -> dash.Dash:
                     fast_miner_result_layout,
                     rmp_results_layout,
                 ],
+                id="result-area",
                 style={"display": "flex", "flex-direction": "column"},
             ),
         ]

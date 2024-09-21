@@ -36,6 +36,11 @@ control_panel_layout = html.Div(
                     id="show-brmp-button",
                     style={"margin-left": "30px"},
                 ),
+                html.Button(
+                    "Clear",
+                    id="clear-button",
+                    style={"margin-left": "30px"},
+                ),
             ],
             style={"display": "flex"},
         ),

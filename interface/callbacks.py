@@ -36,10 +36,6 @@ def register_control_callbacks(app: Dash) -> None:
             Output("upa-table", "data"),
             Output("upa-table", "style_data_conditional"),
             Output("warning-message", "children"),
-            Output("fm-result-table", "columns"),
-            Output("fm-result-table", "data"),
-            Output("fm-result-table", "selected_rows"),
-            Output("calc-time", "children"),
         ],
         [Input("show-upa-button", "n_clicks")],
         [State("dataset-dropdown", "value")],
@@ -83,6 +79,34 @@ def register_control_callbacks(app: Dash) -> None:
                     ]
                 )
 
+            # Update the table data, columns
+            return (
+                columns,
+                data_list,
+                [],
+                "",
+            )
+        return [], [], [], ""
+
+    @app.callback(
+        [
+            Output("warning-message", "children"),
+            Output("fm-result-table", "columns"),
+            Output("fm-result-table", "data"),
+            Output("fm-result-table", "selected_rows"),
+            Output("calc-time", "children"),
+        ],
+        [Input("show-fm-button", "n_clicks")],
+        [State("dataset-dropdown", "value")],
+    )
+    def show_fm_result(n_clicks, dataset):
+        if n_clicks and n_clicks > 0:
+            # Call the function to get the data
+            data = get_data(dataset)
+
+            if data.size == 0:
+                return "Warning: Dataset must be selected", [], [], [], ""
+
             fm_result, fm_time = get_fast_miner_result_with_metadata(data)
             fm_result_table_data = [row for row in fm_result.values()]
 
@@ -111,16 +135,14 @@ def register_control_callbacks(app: Dash) -> None:
 
             # Update the table data, columns
             return (
-                columns,
-                data_list,
-                [],
                 "",
                 fm_columns,
                 fm_result_table_data,
                 [],
                 f"Calculation Time: {fm_time} seconds",
             )
-        return [], [], [], "", [], [], [], ""
+
+        return "", [], [], [], ""
 
     @app.callback(
         Output(
@@ -223,3 +245,13 @@ def register_control_callbacks(app: Dash) -> None:
             )
 
         return [], [], [], [], ""
+
+    @app.callback(
+        Output(
+            "result-area", "children"
+        ),  # Replace 'children' with your table content, if needed
+        Input("clear-button", "n_clicks"),
+    )
+    def clear_output(n_clicks):
+        if n_clicks > 0:
+            return []
