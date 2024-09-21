@@ -167,7 +167,7 @@ def register_control_callbacks(app: Dash) -> None:
             Output("ua-matrix-table", "data"),
             Output("rmp-calc-time", "children"),
         ],
-        [Input("show-upa-button", "n_clicks")],
+        [Input("show-brmp-button", "n_clicks")],
         [State("dataset-dropdown", "value"), State("upa-table", "data")],
     )
     def update_rmp_results(n_clicks, dataset, upa_table_data):

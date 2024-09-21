@@ -24,7 +24,17 @@ control_panel_layout = html.Div(
                     style={"width": "200px"},
                 ),
                 html.Button(
-                    "Show Result", id="show-upa-button", style={"margin-left": "30px"}
+                    "Show UPA", id="show-upa-button", style={"margin-left": "30px"}
+                ),
+                html.Button(
+                    "Show FastMiner Result",
+                    id="show-fm-button",
+                    style={"margin-left": "30px"},
+                ),
+                html.Button(
+                    "Show Basic RMP Results",
+                    id="show-brmp-button",
+                    style={"margin-left": "30px"},
                 ),
             ],
             style={"display": "flex"},
