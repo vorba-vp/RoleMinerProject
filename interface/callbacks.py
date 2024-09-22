@@ -1,7 +1,8 @@
 import time
 
+import dash
 import numpy as np
-from dash import Dash, Input, Output, State
+from dash import Dash, Input, Output, State, callback_context
 
 from algorithms.fast_miner import get_fast_miner_result_with_metadata
 from algorithms.rmp import basic_rmp
@@ -32,13 +33,18 @@ def get_data(dataset: str) -> np.ndarray:
 def register_control_callbacks(app: Dash) -> None:
     @app.callback(
         [
-            Output("upa-table", "columns"),
-            Output("upa-table", "data"),
-            Output("upa-table", "style_data_conditional"),
-            Output("warning-message", "children"),
+            Output("upa-table", "columns", allow_duplicate=True),
+            Output("upa-table", "data", allow_duplicate=True),
+            Output("upa-table", "style_data_conditional", allow_duplicate=True),
+            Output(
+                "warning-message",
+                "children",
+                allow_duplicate=True,
+            ),
         ],
         [Input("show-upa-button", "n_clicks")],
         [State("dataset-dropdown", "value")],
+        prevent_initial_call="initial_duplicate",
     )
     def show_upa(n_clicks, dataset):
         if n_clicks and n_clicks > 0:
@@ -46,7 +52,7 @@ def register_control_callbacks(app: Dash) -> None:
             data = get_data(dataset)
 
             if data.size == 0:
-                return [], [], [], "Warning: Dataset must be selected", [], [], [], ""
+                return [], [], [], "Warning: Dataset must be selected"
 
             # Generate columns dynamically based on the data
             columns = [{"name": "U/P", "id": "p_0"}]
@@ -90,14 +96,19 @@ def register_control_callbacks(app: Dash) -> None:
 
     @app.callback(
         [
-            Output("warning-message", "children"),
-            Output("fm-result-table", "columns"),
-            Output("fm-result-table", "data"),
-            Output("fm-result-table", "selected_rows"),
-            Output("calc-time", "children"),
+            Output(
+                "warning-message",
+                "children",
+                allow_duplicate=True,
+            ),
+            Output("fm-result-table", "columns", allow_duplicate=True),
+            Output("fm-result-table", "data", allow_duplicate=True),
+            Output("fm-result-table", "selected_rows", allow_duplicate=True),
+            Output("calc-time", "children", allow_duplicate=True),
         ],
         [Input("show-fm-button", "n_clicks")],
         [State("dataset-dropdown", "value")],
+        prevent_initial_call="initial_duplicate",
     )
     def show_fm_result(n_clicks, dataset):
         if n_clicks and n_clicks > 0:
@@ -183,22 +194,28 @@ def register_control_callbacks(app: Dash) -> None:
 
     @app.callback(
         [
-            Output("pa-matrix-table", "columns"),
-            Output("pa-matrix-table", "data"),
-            Output("ua-matrix-table", "columns"),
-            Output("ua-matrix-table", "data"),
-            Output("rmp-calc-time", "children"),
+            Output("pa-matrix-table", "columns", allow_duplicate=True),
+            Output("pa-matrix-table", "data", allow_duplicate=True),
+            Output("ua-matrix-table", "columns", allow_duplicate=True),
+            Output("ua-matrix-table", "data", allow_duplicate=True),
+            Output("rmp-calc-time", "children", allow_duplicate=True),
+            Output(
+                "warning-message",
+                "children",
+                allow_duplicate=True,
+            ),
         ],
         [Input("show-brmp-button", "n_clicks")],
         [State("dataset-dropdown", "value"), State("upa-table", "data")],
+        prevent_initial_call="initial_duplicate",
     )
     def update_rmp_results(n_clicks, dataset, upa_table_data):
-        if n_clicks and dataset:
+        if n_clicks and n_clicks > 0:
             # Retrieve the UPA matrix data from the selected dataset
             data = get_data(dataset)
 
             if data.size == 0:
-                return [], [], [], [], "Warning: Invalid dataset selected."
+                return [], [], [], [], "", "Warning: Dataset must be selected"
 
             # Run the RMP algorithm
             start_time = time.time()
@@ -242,16 +259,63 @@ def register_control_callbacks(app: Dash) -> None:
                 ua_columns,
                 ua_matrix_data,
                 f"RMP Calculation Time: {calc_time:.2f} seconds",
+                "",
             )
 
-        return [], [], [], [], ""
+        return [], [], [], [], "", ""
+
+        # Callback to clear the dataset selection
 
     @app.callback(
-        Output(
-            "result-area", "children"
-        ),  # Replace 'children' with your table content, if needed
-        Input("clear-button", "n_clicks"),
+        [
+            Output("dataset-dropdown", "value", allow_duplicate=True),
+            Output("warning-message", "children", allow_duplicate=True),
+            Output("upa-table", "columns", allow_duplicate=True),
+            Output("upa-table", "data", allow_duplicate=True),
+            Output("upa-table", "style_data_conditional", allow_duplicate=True),
+            Output("fm-result-table", "columns", allow_duplicate=True),
+            Output("fm-result-table", "data", allow_duplicate=True),
+            Output("fm-result-table", "selected_rows", allow_duplicate=True),
+            Output("calc-time", "children", allow_duplicate=True),
+            Output("pa-matrix-table", "columns", allow_duplicate=True),
+            Output("pa-matrix-table", "data", allow_duplicate=True),
+            Output("ua-matrix-table", "columns", allow_duplicate=True),
+            Output("ua-matrix-table", "data", allow_duplicate=True),
+            Output("rmp-calc-time", "children", allow_duplicate=True),
+        ],
+        [Input("clear-button", "n_clicks"), Input("dataset-dropdown", "value")],
+        prevent_initial_call="initial_duplicate",
     )
-    def clear_output(n_clicks):
-        if n_clicks > 0:
-            return []
+    def clear_dataset(n_clicks, selected_value):
+        ctx = callback_context  # Get the callback context
+
+        if not ctx.triggered:
+            # No trigger yet, this shouldn't happen due to prevent_initial_call
+            return dash.no_update
+
+        # Determine which input triggered the callback
+        triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+        if triggered_id == "clear-button" and n_clicks > 0:
+            # Clear button was clicked
+            return (
+                None,  # Clear dropdown value
+                "",  # Clear warning message
+                [],  # Clear UPA table columns
+                [],  # Clear UPA table data
+                [],  # Clear UPA table style
+                [],  # Clear FM result table columns
+                [],  # Clear FM result table data
+                [],  # Clear FM result table selected rows
+                "",  # Clear calc-time
+                [],  # Clear PA matrix table columns
+                [],  # Clear PA matrix table data
+                [],  # Clear UA matrix table columns
+                [],  # Clear UA matrix table data
+                "",  # Clear rmp-calc-time
+            )
+        elif triggered_id == "dataset-dropdown" and selected_value is not None:
+            # Dropdown value was changed
+            return (selected_value, "", [], [], [], [], [], [], "", [], [], [], [], "")
+
+        return dash.no_update
