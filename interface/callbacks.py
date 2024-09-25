@@ -206,10 +206,10 @@ def register_control_callbacks(app: Dash) -> None:
             ),
         ],
         [Input("show-brmp-button", "n_clicks")],
-        [State("dataset-dropdown", "value"), State("upa-table", "data")],
+        [State("d-factor-input", "value"), State("dataset-dropdown", "value")],
         prevent_initial_call="initial_duplicate",
     )
-    def update_rmp_results(n_clicks, dataset, upa_table_data):
+    def update_rmp_results(n_clicks, delta_factor, dataset):
         if n_clicks and n_clicks > 0:
             # Retrieve the UPA matrix data from the selected dataset
             data = get_data(dataset)
@@ -219,7 +219,7 @@ def register_control_callbacks(app: Dash) -> None:
 
             # Run the RMP algorithm
             start_time = time.time()
-            pa_matrix, ua_matrix = basic_rmp(data)
+            pa_matrix, ua_matrix = basic_rmp(data, delta_factor)
             calc_time = time.time() - start_time
 
             # Prepare PA matrix data for display
@@ -269,6 +269,7 @@ def register_control_callbacks(app: Dash) -> None:
     @app.callback(
         [
             Output("dataset-dropdown", "value", allow_duplicate=True),
+            Output("d-factor-input", "value", allow_duplicate=True),
             Output("warning-message", "children", allow_duplicate=True),
             Output("upa-table", "columns", allow_duplicate=True),
             Output("upa-table", "data", allow_duplicate=True),
@@ -300,6 +301,7 @@ def register_control_callbacks(app: Dash) -> None:
             # Clear button was clicked
             return (
                 None,  # Clear dropdown value
+                0,  # Clear D-Factor input value
                 "",  # Clear warning message
                 [],  # Clear UPA table columns
                 [],  # Clear UPA table data
@@ -316,6 +318,6 @@ def register_control_callbacks(app: Dash) -> None:
             )
         elif triggered_id == "dataset-dropdown" and selected_value is not None:
             # Dropdown value was changed
-            return (selected_value, "", [], [], [], [], [], [], "", [], [], [], [], "")
+            return selected_value, 0, "", [], [], [], [], [], [], "", [], [], [], [], ""
 
         return dash.no_update
