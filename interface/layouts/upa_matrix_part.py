@@ -30,6 +30,7 @@ def get_upa_matrix_layout():
                             }
                         ],
                         page_size=20,
+                        virtualization=True,
                     ),
                 ],
             ),

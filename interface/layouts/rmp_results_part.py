@@ -20,6 +20,7 @@ def get_rmp_results_layout():
                                 style_cell={"textAlign": "left"},
                                 sort_action="native",
                                 page_size=20,
+                                virtualization=True,
                                 style_data_conditional=[
                                     {
                                         "if": {
@@ -44,6 +45,7 @@ def get_rmp_results_layout():
                                 style_cell={"textAlign": "left"},
                                 sort_action="native",
                                 page_size=20,
+                                virtualization=True,
                                 style_data_conditional=[
                                     {
                                         "if": {

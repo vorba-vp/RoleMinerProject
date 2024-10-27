@@ -17,6 +17,7 @@ def get_fast_miner_result_layout():
                         style_cell={"textAlign": "left"},
                         sort_action="native",
                         page_size=20,
+                        virtualization=True,
                         style_data_conditional=[
                             {
                                 "if": {
