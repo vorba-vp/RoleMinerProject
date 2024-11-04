@@ -180,8 +180,7 @@ def get_max_cover_role(
 
     # Filter out the max cover role from the list of roles
     mask = ~np.all(
-        (list_of_roles >= max_cover_role_array)
-        & (list_of_roles == max_cover_role_array),
+        (list_of_roles == max_cover_role_array),
         axis=1,
     )
     updated_list_of_roles = list_of_roles[mask]
